@@ -558,10 +558,10 @@ function updateCards(idx){
   document.getElementById('c-stage').textContent    = st.name;
   document.getElementById('c-stage-note').textContent = st.desc;
 
-  // Animate cards
+  // Animate cards (void el.offsetWidth forces a reflow to restart the CSS animation)
   document.querySelectorAll('.summary-card').forEach(el=>{
     el.classList.remove('card-flash');
-    void el.offsetWidth;
+    void el.offsetWidth; // Force reflow so the animation restarts from the beginning
     el.classList.add('card-flash');
   });
 
@@ -572,13 +572,24 @@ function updateCards(idx){
 }
 
 function highlightSelectedPoint(idx){
+  // Build highlight arrays once per call, reusing the base colour from borderColor
   [mainChart, soilChart, phEcChart].forEach(chart=>{
     chart.data.datasets.forEach(ds=>{
       if(ds.type === 'bar') return;
-      ds.pointRadius       = MONTHS.map((_,i)=> i===idx ? 9  : 3);
-      ds.pointBorderWidth  = MONTHS.map((_,i)=> i===idx ? 2.5 : 0.5);
-      ds.pointBorderColor  = MONTHS.map((_,i)=> i===idx ? '#ffffff' : ds.borderColor);
-      ds.pointBackgroundColor = MONTHS.map((_,i)=> i===idx ? '#ffffff' : ds.borderColor);
+      const base = ds.borderColor;
+      const r = new Array(MONTHS.length);
+      const bw = new Array(MONTHS.length);
+      const bc = new Array(MONTHS.length);
+      for(let i=0;i<MONTHS.length;i++){
+        const sel = i===idx;
+        r[i]  = sel ? 9 : 3;
+        bw[i] = sel ? 2.5 : 0.5;
+        bc[i] = sel ? '#ffffff' : base;
+      }
+      ds.pointRadius          = r;
+      ds.pointBorderWidth     = bw;
+      ds.pointBorderColor     = bc;
+      ds.pointBackgroundColor = bc;
     });
   });
 }
@@ -599,7 +610,7 @@ function updateAll(idx){
   mainChart.update('none');
   soilChart.update('none');
   phEcChart.update('none');
-  radarChart.update();
+  radarChart.update('none');
 }
 
 // ═══════════════════════════════════════════
@@ -616,8 +627,18 @@ MONTHS.forEach((m,i)=>{
   ticksEl.appendChild(span);
 });
 
+// Use requestAnimationFrame to debounce rapid slider drags while keeping
+// the crosshair and cards feeling instant on each animation frame.
+let rafPending = false;
 document.getElementById('dateSlider').addEventListener('input', e=>{
-  updateAll(parseInt(e.target.value));
+  const idx = parseInt(e.target.value);
+  if(!rafPending){
+    rafPending = true;
+    requestAnimationFrame(()=>{
+      updateAll(idx);
+      rafPending = false;
+    });
+  }
 });
 
 // ── Initialize with January (index 4) ──
