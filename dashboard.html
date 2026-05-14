@@ -1,573 +1,474 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🌾 농업 데이터 시계열 분석 대시보드</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    :root {
-      --sidebar-width: 200px;
-      --header-height: 56px;
-      --color-bg: #f4f6f3;
-      --color-sidebar: #2d4a2d;
-      --color-card: #ffffff;
-      --color-accent: #4CAF50;
-      --color-text: #2c3e2d;
-      --color-sub: #6b7c6b;
-      /* 생육단계 컬러 */
-      --c-seeding:  rgba(139,105,20,0.15);
-      --c-germinate:rgba(168,213,162,0.3);
-      --c-seedling: rgba(76,175,80,0.2);
-      --c-bulbing:  rgba(46,125,50,0.2);
-      --c-mature:   rgba(139,195,74,0.2);
-      --c-harvest:  rgba(255,193,7,0.2);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--color-bg); color: var(--color-text); }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>🌾 농업 통합 데이터 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0f1923;color:#e0e8e0;font-family:'Segoe UI',sans-serif;font-size:13px;}
 
-    /* ── HEADER ── */
-    header {
-      position: fixed; top: 0; left: 0; right: 0; height: var(--header-height);
-      background: var(--color-sidebar); color: #fff;
-      display: flex; align-items: center; padding: 0 24px; z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    header h1 { font-size: 18px; font-weight: 700; }
-    header span { margin-left: auto; font-size: 13px; opacity: 0.8; }
+  /* ── HEADER ── */
+  header{
+    background:#111e14;border-bottom:1px solid #1e3a20;
+    padding:10px 20px;display:flex;align-items:center;gap:16px;
+    position:sticky;top:0;z-index:100;
+  }
+  header h1{font-size:16px;font-weight:700;color:#7ddb7d;}
+  .stage-pills{display:flex;gap:6px;margin-left:auto;}
+  .pill{padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;opacity:.7;transition:.2s;}
+  .pill.active{opacity:1;}
+  .pill-blue  {background:#1b3a5c;color:#64b5f6;border:1px solid #64b5f6;}
+  .pill-green {background:#1b3d1b;color:#81c784;border:1px solid #81c784;}
+  .pill-yellow{background:#3d3000;color:#ffd54f;border:1px solid #ffd54f;}
+  .pill-purple{background:#2e1b4a;color:#ce93d8;border:1px solid #ce93d8;}
 
-    /* ── SIDEBAR ── */
-    nav {
-      position: fixed; top: var(--header-height); left: 0; bottom: 0;
-      width: var(--sidebar-width); background: #1e3320; color: #cde8cd;
-      overflow-y: auto; z-index: 90; padding-top: 12px;
-    }
-    nav .nav-item {
-      padding: 10px 20px; cursor: pointer; font-size: 13px;
-      border-left: 3px solid transparent; transition: all 0.2s;
-    }
-    nav .nav-item:hover, nav .nav-item.active {
-      background: rgba(76,175,80,0.2); border-left-color: var(--color-accent); color: #fff;
-    }
-    nav .nav-section { padding: 14px 16px 4px; font-size: 11px; color: #7ab87a; text-transform: uppercase; letter-spacing: 1px; }
+  /* ── LAYOUT ── */
+  .layout{display:grid;grid-template-columns:1fr 260px;height:calc(100vh - 48px);}
 
-    /* ── MAIN ── */
-    main {
-      margin-top: var(--header-height); margin-left: var(--sidebar-width);
-      padding: 24px; min-height: calc(100vh - var(--header-height));
-    }
+  /* ── LEFT PANEL ── */
+  .left-panel{display:flex;flex-direction:column;padding:12px;gap:10px;overflow-y:auto;}
 
-    /* ── TIMELINE BAR ── */
-    .timeline-bar {
-      background: var(--color-card); border-radius: 12px; padding: 16px 24px;
-      margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-    .timeline-bar h3 { font-size: 13px; color: var(--color-sub); margin-bottom: 10px; }
-    .stage-bar {
-      display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 8px;
-    }
-    .stage-bar div {
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    }
-    .tl-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .tl-btn {
-      padding: 5px 14px; border-radius: 20px; border: 1px solid #ccc;
-      background: #fff; font-size: 12px; cursor: pointer; transition: all 0.2s;
-    }
-    .tl-btn.active, .tl-btn:hover { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+  /* KPI Row */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  .kpi{background:#141f16;border:1px solid #1e3220;border-radius:8px;padding:10px 12px;}
+  .kpi .lbl{font-size:10px;color:#7a9a7a;margin-bottom:3px;}
+  .kpi .val{font-size:20px;font-weight:700;}
+  .kpi .delta{font-size:10px;margin-top:2px;}
+  .up{color:#ef5350;} .dn{color:#42a5f5;} .ok{color:#66bb6a;}
 
-    /* ── KPI CARDS ── */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
-    .kpi-card {
-      background: var(--color-card); border-radius: 12px; padding: 18px 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-top: 4px solid var(--color-accent);
-    }
-    .kpi-card .label { font-size: 12px; color: var(--color-sub); margin-bottom: 6px; }
-    .kpi-card .value { font-size: 28px; font-weight: 700; color: var(--color-text); }
-    .kpi-card .delta { font-size: 12px; margin-top: 4px; }
-    .delta.up { color: #e53935; } .delta.down { color: #1565c0; } .delta.neutral { color: var(--color-sub); }
+  /* Chart panels */
+  .chart-panel{background:#141f16;border:1px solid #1e3220;border-radius:10px;padding:12px;}
+  .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .panel-title{font-size:12px;font-weight:700;color:#a5d6a7;}
+  .legend-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#8aaa8a;}
+  .leg span{width:20px;height:3px;display:inline-block;border-radius:2px;}
+  .leg .dot{width:8px;height:8px;border-radius:50%;}
 
-    /* ── CHART CARDS ── */
-    .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-    .chart-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-    .chart-card {
-      background: var(--color-card); border-radius: 12px; padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-    .chart-card.full { grid-column: 1 / -1; }
-    .chart-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-    .chart-card p  { font-size: 12px; color: var(--color-sub); margin-bottom: 14px; }
-    .chart-wrap { position: relative; }
+  /* stage band inside chart */
+  .stage-band{display:flex;height:18px;border-radius:4px;overflow:hidden;margin-bottom:6px;}
+  .stage-band div{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;}
 
-    /* ── SECTION TITLE ── */
-    .section-title {
-      font-size: 16px; font-weight: 700; margin: 28px 0 14px;
-      padding-left: 10px; border-left: 4px solid var(--color-accent);
-    }
+  /* INTEGRATED chart area */
+  .integrated{flex:1;min-height:0;}
+  .integrated canvas{width:100%!important;}
 
-    /* ── HEATMAP ── */
-    .heatmap-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .heatmap-table th { padding: 6px 10px; text-align: center; font-size: 11px; color: var(--color-sub); }
-    .heatmap-table td { padding: 8px 6px; text-align: center; border-radius: 4px; font-weight: 600; font-size: 12px; }
+  /* ── RIGHT PANEL (Image Timeline) ── */
+  .right-panel{
+    background:#0c1510;border-left:1px solid #1e3220;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .right-panel h2{
+    font-size:12px;font-weight:700;color:#7ddb7d;
+    padding:12px 14px;border-bottom:1px solid #1e3220;
+  }
+  .timeline-scroll{overflow-y:auto;flex:1;padding:10px 12px;}
+  .tl-item{display:flex;gap:10px;margin-bottom:16px;position:relative;cursor:pointer;}
+  .tl-item::before{
+    content:'';position:absolute;left:7px;top:22px;bottom:-16px;
+    width:2px;background:#1e3220;
+  }
+  .tl-item:last-child::before{display:none;}
+  .tl-dot{
+    width:16px;height:16px;border-radius:50%;border:2px solid;
+    flex-shrink:0;margin-top:2px;position:relative;z-index:1;background:#0c1510;
+  }
+  .tl-info{flex:1;}
+  .tl-date{font-size:10px;color:#7a9a7a;margin-bottom:3px;}
+  .tl-label{font-size:11px;font-weight:600;color:#c8e6c9;margin-bottom:5px;}
+  .tl-stage{font-size:10px;padding:1px 7px;border-radius:10px;display:inline-block;margin-bottom:5px;}
+  .tl-thumb{
+    width:100%;height:68px;border-radius:6px;overflow:hidden;
+    background:#1a2f1c;display:flex;align-items:center;justify-content:center;
+    font-size:28px;border:1px solid #1e3220;position:relative;
+  }
+  .tl-thumb .play{
+    position:absolute;bottom:4px;right:6px;
+    background:rgba(0,0,0,.6);border-radius:3px;
+    font-size:9px;padding:1px 5px;color:#fff;
+  }
+  .tl-metrics{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+  .tl-metric{font-size:10px;background:#1a2f1c;padding:2px 7px;border-radius:10px;color:#81c784;}
 
-    /* ── INSIGHT BOX ── */
-    .insight-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
-    .insight-card {
-      background: var(--color-card); border-radius: 12px; padding: 18px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid;
-    }
-    .insight-card.green  { border-color: #4CAF50; }
-    .insight-card.orange { border-color: #FF9800; }
-    .insight-card.red    { border-color: #f44336; }
-    .insight-card .icon  { font-size: 22px; margin-bottom: 8px; }
-    .insight-card h4     { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-    .insight-card p      { font-size: 12px; color: var(--color-sub); line-height: 1.6; }
+  /* hover */
+  .tl-item:hover .tl-thumb{border-color:#4CAF50;}
 
-    @media (max-width: 900px) {
-      nav { display: none; }
-      main { margin-left: 0; }
-      .kpi-grid { grid-template-columns: repeat(2,1fr); }
-      .chart-grid-2 { grid-template-columns: 1fr; }
-      .chart-grid-4 { grid-template-columns: 1fr 1fr; }
-      .insight-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  /* tooltip custom */
+  .tooltip-box{
+    background:#1a2d1c!important;border:1px solid #2e5a2e!important;
+    border-radius:8px!important;color:#e0e8e0!important;
+    padding:10px 14px!important;font-size:12px!important;
+  }
+</style>
 </head>
 <body>
 
 <!-- HEADER -->
 <header>
-  <h1>🌾 노지 농업 데이터 시계열 분석 플랫폼</h1>
-  <span>양파 재배 모니터링 | 2025.09.15 ~ 2026.06.20</span>
+  <h1>🌾 농업 통합 데이터 대시보드 — 양파 재배 2025/26</h1>
+  <div class="stage-pills">
+    <div class="pill pill-blue active">전체 기간</div>
+    <div class="pill pill-green">유묘기</div>
+    <div class="pill pill-yellow">구비대기</div>
+    <div class="pill pill-purple">성숙기</div>
+  </div>
 </header>
 
-<!-- SIDEBAR -->
-<nav>
-  <div class="nav-section">메뉴</div>
-  <div class="nav-item active">📊 대시보드</div>
-  <div class="nav-section">데이터</div>
-  <div class="nav-item">🌡️ 환경 데이터</div>
-  <div class="nav-item">🌱 생육 데이터</div>
-  <div class="nav-item">📷 영상 데이터</div>
-  <div class="nav-section">분석</div>
-  <div class="nav-item">🔗 상관 분석</div>
-  <div class="nav-item">📈 예측 모델</div>
-</nav>
+<div class="layout">
 
-<!-- MAIN -->
-<main>
+  <!-- ══ LEFT ══ -->
+  <div class="left-panel">
 
-  <!-- TIMELINE -->
-  <div class="timeline-bar">
-    <h3>📅 생육 단계 타임라인 (2025.09 ~ 2026.06)</h3>
-    <div class="stage-bar">
-      <div style="width:8%;  background:#8B6914;">파종기</div>
-      <div style="width:7%;  background:#6aaa60;">발아기</div>
-      <div style="width:18%; background:#4CAF50;">유묘기</div>
-      <div style="width:22%; background:#388E3C;">월동기</div>
-      <div style="width:30%; background:#2E7D32;">구비대기</div>
-      <div style="width:15%; background:#FFC107; color:#333;">성숙·수확</div>
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi" style="border-color:#c62828;">
+        <div class="lbl">🌡️ 평균 기온</div>
+        <div class="val" style="color:#ef9a9a;">18.4°C</div>
+        <div class="delta up">▲ +2.1°C</div>
+      </div>
+      <div class="kpi" style="border-color:#1565c0;">
+        <div class="lbl">💧 지습</div>
+        <div class="val" style="color:#90caf9;">62.3%</div>
+        <div class="delta dn">▼ -3.2%</div>
+      </div>
+      <div class="kpi" style="border-color:#2e7d32;">
+        <div class="lbl">🌱 초장</div>
+        <div class="val" style="color:#a5d6a7;">55 cm</div>
+        <div class="delta ok">▲ +2cm</div>
+      </div>
+      <div class="kpi" style="border-color:#e65100;">
+        <div class="lbl">🧅 구경</div>
+        <div class="val" style="color:#ffcc80;">85 mm</div>
+        <div class="delta ok">▲ +6mm</div>
+      </div>
+      <div class="kpi" style="border-color:#6a1b9a;">
+        <div class="lbl">⚡ EC</div>
+        <div class="val" style="color:#ce93d8;">1.8 dS/m</div>
+        <div class="delta up">⚠ 상한 근접</div>
+      </div>
     </div>
-    <div class="tl-btns">
-      <button class="tl-btn">파종기</button>
-      <button class="tl-btn">발아기</button>
-      <button class="tl-btn">유묘기</button>
-      <button class="tl-btn">월동기</button>
-      <button class="tl-btn active">구비대기</button>
-      <button class="tl-btn">성숙기</button>
-      <button class="tl-btn">전체 기간</button>
+
+    <!-- 생육단계 밴드 -->
+    <div class="chart-panel" style="padding:10px 12px;">
+      <div class="panel-header">
+        <span class="panel-title">📅 생육 단계 타임라인</span>
+        <span style="font-size:10px;color:#7a9a7a;">2025.09.15 → 2026.06.20</span>
+      </div>
+      <div class="stage-band">
+        <div style="width:8%;background:#6d4c0f;">파종</div>
+        <div style="width:7%;background:#388e3c;">발아</div>
+        <div style="width:18%;background:#2e7d32;">유묘기</div>
+        <div style="width:22%;background:#1b5e20;">월동기</div>
+        <div style="width:30%;background:#33691e;">구비대기</div>
+        <div style="width:15%;background:#f9a825;color:#222;">성숙·수확</div>
+      </div>
+      <!-- x축 월 레이블 -->
+      <div style="display:flex;justify-content:space-between;padding:0 2px;margin-top:4px;">
+        <span style="font-size:10px;color:#5a7a5a;">9월</span>
+        <span style="font-size:10px;color:#5a7a5a;">10월</span>
+        <span style="font-size:10px;color:#5a7a5a;">11월</span>
+        <span style="font-size:10px;color:#5a7a5a;">12월</span>
+        <span style="font-size:10px;color:#5a7a5a;">1월</span>
+        <span style="font-size:10px;color:#5a7a5a;">2월</span>
+        <span style="font-size:10px;color:#5a7a5a;">3월</span>
+        <span style="font-size:10px;color:#5a7a5a;">4월</span>
+        <span style="font-size:10px;color:#5a7a5a;">5월</span>
+        <span style="font-size:10px;color:#5a7a5a;">6월</span>
+      </div>
     </div>
+
+    <!-- ★ 통합 멀티레이어 차트 ★ -->
+    <div class="chart-panel integrated">
+      <div class="panel-header">
+        <span class="panel-title">📊 환경 + 생육 통합 시계열 (동기화)</span>
+        <div class="legend-row">
+          <div class="leg"><span style="background:#ef9a9a;"></span>기온</div>
+          <div class="leg"><span style="background:#90caf9;"></span>습도</div>
+          <div class="leg"><span style="background:#ffb74d;"></span>지온</div>
+          <div class="leg"><span style="background:#80deea;"></span>지습</div>
+          <div class="leg"><span style="background:#ce93d8;height:2px;border-top:2px dashed #ce93d8;"></span>pH</div>
+          <div class="leg"><span style="background:#fff176;height:2px;border-top:2px dashed #fff176;"></span>EC</div>
+          <div class="leg"><div class="dot" style="background:#a5d6a7;"></div>초장</div>
+          <div class="leg"><div class="dot" style="background:#ffcc80;"></div>구경</div>
+          <div class="leg"><div class="dot" style="background:#f48fb1;"></div>엽수</div>
+        </div>
+      </div>
+      <canvas id="mainChart"></canvas>
+    </div>
+
+    <!-- 강우/관개 + 생육속도 행 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">🌧️ 강우 / 관개량 (mm)</span>
+        </div>
+        <canvas id="rainChart" height="110"></canvas>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">📈 pH · EC 추이 + 적정범위</span>
+        </div>
+        <canvas id="phEcChart" height="110"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- ══ RIGHT (Image Timeline) ══ -->
+  <div class="right-panel">
+    <h2>📷 생육 영상 타임라인</h2>
+    <div class="timeline-scroll" id="imgTimeline"></div>
   </div>
 
-  <!-- KPI -->
-  <div class="kpi-grid">
-    <div class="kpi-card" style="border-color:#e53935;">
-      <div class="label">🌡️ 평균 기온</div>
-      <div class="value">18.4°C</div>
-      <div class="delta up">▲ 전일 +2.1°C</div>
-    </div>
-    <div class="kpi-card" style="border-color:#1565c0;">
-      <div class="label">💧 평균 지습</div>
-      <div class="value">62.3%</div>
-      <div class="delta down">▼ 전일 -3.2%</div>
-    </div>
-    <div class="kpi-card" style="border-color:#4CAF50;">
-      <div class="label">🌱 현재 생육단계</div>
-      <div class="value" style="font-size:20px;">구비대기</div>
-      <div class="delta neutral">D+180일 경과</div>
-    </div>
-    <div class="kpi-card" style="border-color:#FF9800;">
-      <div class="label">⚡ 토양 EC</div>
-      <div class="value">1.8 dS/m</div>
-      <div class="delta up">▲ 적정범위 상단</div>
-    </div>
-  </div>
-
-  <!-- 환경 데이터 -->
-  <div class="section-title">🌡️ 환경 데이터 시계열</div>
-
-  <!-- 기온/습도 -->
-  <div class="chart-card full" style="margin-bottom:16px;">
-    <h3>기온 / 상대습도 추이</h3>
-    <p>일별 평균 기온(°C)과 상대습도(%) — 생육단계 구간 배경 표시</p>
-    <div class="chart-wrap"><canvas id="chartTempHumid" height="90"></canvas></div>
-  </div>
-
-  <!-- 토양 4분할 -->
-  <div class="chart-grid-2">
-    <div class="chart-card">
-      <h3>🌍 지온 (깊이별)</h3>
-      <p>10cm / 20cm / 30cm 토양 온도</p>
-      <div class="chart-wrap"><canvas id="chartSoilTemp" height="160"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>💧 지습 (깊이별)</h3>
-      <p>10cm / 20cm / 30cm 토양 수분</p>
-      <div class="chart-wrap"><canvas id="chartSoilMoist" height="160"></canvas></div>
-    </div>
-  </div>
-  <div class="chart-grid-2">
-    <div class="chart-card">
-      <h3>🧪 토양 pH 추이</h3>
-      <p>적정범위: 6.0 ~ 6.5 (음영 표시)</p>
-      <div class="chart-wrap"><canvas id="chartPH" height="160"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>⚡ EC (전기전도도)</h3>
-      <p>적정범위: 1.0 ~ 2.0 dS/m (음영 표시)</p>
-      <div class="chart-wrap"><canvas id="chartEC" height="160"></canvas></div>
-    </div>
-  </div>
-
-  <!-- 생육 데이터 -->
-  <div class="section-title">🌱 생육 데이터 시계열 (양파)</div>
-
-  <div class="chart-card full" style="margin-bottom:16px;">
-    <h3>초장 / 엽수 / 구경 성장 곡선</h3>
-    <p>실측값(●) vs 표준 생육곡선(점선) 비교 — 구비대기부터 구경 급성장</p>
-    <div class="chart-wrap"><canvas id="chartGrowth" height="90"></canvas></div>
-  </div>
-
-  <div class="chart-grid-2">
-    <div class="chart-card">
-      <h3>🧅 구 발달 추이 (구경 · 구중)</h3>
-      <p>구비대기 진입 후 주별 구경(mm) / 구중(g)</p>
-      <div class="chart-wrap"><canvas id="chartBulb" height="160"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h3>📡 생육 인자 레이더</h3>
-      <p>현재 vs 1개월 전 vs 2개월 전 비교</p>
-      <div class="chart-wrap"><canvas id="chartRadar" height="160"></canvas></div>
-    </div>
-  </div>
-
-  <!-- 상관 분석 -->
-  <div class="section-title">🔗 환경 × 생육 상관 분석</div>
-
-  <div class="chart-grid-2" style="margin-bottom:20px;">
-    <div class="chart-card">
-      <h3>상관관계 히트맵 (Pearson r)</h3>
-      <p>환경 인자 ↔ 생육 인자 상관계수</p>
-      <div id="heatmapContainer"></div>
-    </div>
-    <div class="chart-card">
-      <h3>📊 생육단계별 주요 환경 영향도</h3>
-      <p>구경 성장에 영향을 준 환경 인자 비율</p>
-      <div class="chart-wrap"><canvas id="chartInfluence" height="200"></canvas></div>
-    </div>
-  </div>
-
-  <!-- INSIGHT -->
-  <div class="section-title">💡 주요 인사이트</div>
-  <div class="insight-grid">
-    <div class="insight-card green">
-      <div class="icon">✅</div>
-      <h4>구비대기 생육 순조</h4>
-      <p>현재 구경 성장 속도가 표준 생육곡선 대비 +8% 빠름. 지온 14~16°C 유지가 긍정적 영향.</p>
-    </div>
-    <div class="insight-card orange">
-      <div class="icon">⚠️</div>
-      <h4>EC 상단 경계 주의</h4>
-      <p>EC가 1.8 dS/m으로 적정 상한(2.0)에 근접. 3월 중 시비량 조절 및 관개 보강 권장.</p>
-    </div>
-    <div class="insight-card red">
-      <div class="icon">🚨</div>
-      <h4>2월 저온 스트레스 감지</h4>
-      <p>2월 2주간 지온 4°C 이하 지속 → 해당 기간 초장 성장 정체 확인. 향후 보온 멀칭 필요.</p>
-    </div>
-  </div>
-
-</main>
+</div><!-- /layout -->
 
 <script>
-// ── 공통 레이블 (월별) ──
-const months = ['9월','10월','11월','12월','1월','2월','3월','4월','5월','6월'];
+// ──────────────────────────────────────────
+// 공통 데이터
+// ──────────────────────────────────────────
+const labels = ['9월','10월','11월','12월','1월','2월','3월','4월','5월','6월'];
 
-// 생육단계 배경 플러그인
 const stageBgPlugin = {
-  id: 'stageBg',
-  beforeDraw(chart) {
-    const {ctx, chartArea: {left,right,top,bottom}, scales: {x}} = chart;
-    if (!x) return;
-    const stages = [
-      {start:0, end:0.8,  color:'rgba(139,105,20,0.08)'},
-      {start:0.8,end:1.5, color:'rgba(168,213,162,0.18)'},
-      {start:1.5,end:3.5, color:'rgba(76,175,80,0.12)'},
-      {start:3.5,end:5.5, color:'rgba(46,100,50,0.10)'},
-      {start:5.5,end:8.5, color:'rgba(46,125,50,0.15)'},
-      {start:8.5,end:9.5, color:'rgba(255,193,7,0.18)'},
+  id:'stageBg',
+  beforeDraw(chart){
+    const {ctx,chartArea:{left,right,top,bottom}} = chart;
+    const W = right - left;
+    const bands = [
+      {s:0,   e:0.08, c:'rgba(109,76,15,0.25)'},
+      {s:0.08,e:0.15, c:'rgba(56,142,60,0.20)'},
+      {s:0.15,e:0.33, c:'rgba(46,125,50,0.18)'},
+      {s:0.33,e:0.55, c:'rgba(27,94,32,0.20)'},
+      {s:0.55,e:0.85, c:'rgba(51,105,30,0.22)'},
+      {s:0.85,e:1.0,  c:'rgba(249,168,37,0.20)'},
     ];
-    const total = 9;
-    stages.forEach(s => {
-      const x1 = left + (s.start/total)*(right-left);
-      const x2 = left + (s.end/total)*(right-left);
-      ctx.fillStyle = s.color;
-      ctx.fillRect(x1, top, x2-x1, bottom-top);
+    bands.forEach(b=>{
+      ctx.fillStyle=b.c;
+      ctx.fillRect(left+b.s*W,top,(b.e-b.s)*W,bottom-top);
+    });
+    // 세로 구분선
+    [0.08,0.15,0.33,0.55,0.85].forEach(p=>{
+      ctx.strokeStyle='rgba(255,255,255,0.06)';
+      ctx.lineWidth=1;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.moveTo(left+p*W,top);
+      ctx.lineTo(left+p*W,bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
     });
   }
 };
 
-// ── 1. 기온/습도 ──
-new Chart(document.getElementById('chartTempHumid'), {
-  type: 'bar',
-  plugins: [stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      {
-        type:'line', label:'최고 기온(°C)', yAxisID:'yTemp',
-        data: [22,17,12,4,2,5,10,16,20,24],
-        borderColor:'#e53935', backgroundColor:'rgba(229,57,53,0.1)',
-        tension:0.4, pointRadius:4, fill:false
+const darkGrid = {
+  color:'rgba(255,255,255,0.04)',
+  borderColor:'rgba(255,255,255,0.08)'
+};
+
+// ──────────────────────────────────────────
+// 1. 메인 통합 차트
+// ──────────────────────────────────────────
+new Chart(document.getElementById('mainChart'),{
+  type:'line',
+  plugins:[stageBgPlugin],
+  data:{
+    labels,
+    datasets:[
+      // 환경 라인
+      {label:'기온(°C)',     data:[20,15,8,1,-1,3,10,16,21,24],
+       borderColor:'#ef9a9a',backgroundColor:'rgba(239,154,154,0.08)',
+       yAxisID:'yEnv',tension:.4,pointRadius:3,borderWidth:2},
+      {label:'습도(%)',      data:[72,68,75,80,78,82,70,65,60,58],
+       borderColor:'#90caf9',backgroundColor:'rgba(144,202,249,0.06)',
+       yAxisID:'yEnv',tension:.4,pointRadius:2,borderWidth:1.5,borderDash:[4,2]},
+      {label:'지온(°C)',     data:[17,12,6,1,0,2,6,11,15,19],
+       borderColor:'#ffb74d',backgroundColor:'rgba(255,183,77,0.06)',
+       yAxisID:'yEnv',tension:.4,pointRadius:2,borderWidth:1.5},
+      {label:'지습(%)',      data:[55,60,68,72,70,75,65,58,52,48],
+       borderColor:'#80deea',backgroundColor:'rgba(128,222,234,0.06)',
+       yAxisID:'yEnv',tension:.4,pointRadius:2,borderWidth:1.5,borderDash:[2,2]},
+      // 생육 산점+라인
+      {label:'초장(cm)',     data:[3,8,18,22,24,26,35,48,55,52],
+       borderColor:'#a5d6a7',backgroundColor:'#a5d6a7',
+       yAxisID:'yGrowth',type:'line',tension:.4,
+       pointRadius:5,pointStyle:'circle',borderWidth:2},
+      {label:'구경(mm)',     data:[0,0,0,0,5,8,25,55,85,95],
+       borderColor:'#ffcc80',backgroundColor:'#ffcc80',
+       yAxisID:'yGrowth',type:'line',tension:.4,
+       pointRadius:5,pointStyle:'rectRot',borderWidth:2},
+      {label:'엽수(매)×5',  data:[10,15,25,30,30,35,40,45,45,40],
+       borderColor:'#f48fb1',backgroundColor:'#f48fb1',
+       yAxisID:'yGrowth',type:'line',tension:.4,
+       pointRadius:4,pointStyle:'triangle',borderWidth:1.5,borderDash:[3,2]},
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    scales:{
+      x:{
+        ticks:{color:'#6a8a6a',font:{size:11}},
+        grid:darkGrid,
+        border:{color:'rgba(255,255,255,0.08)'}
       },
-      {
-        type:'line', label:'최저 기온(°C)', yAxisID:'yTemp',
-        data: [14,9,3,-3,-6,-4,1,7,12,17],
-        borderColor:'#1565c0', backgroundColor:'rgba(21,101,192,0.1)',
-        tension:0.4, pointRadius:4, fill:false
+      yEnv:{
+        position:'left',
+        title:{display:true,text:'환경 (°C / %)',color:'#6a8a6a',font:{size:11}},
+        ticks:{color:'#6a8a6a',font:{size:10}},
+        grid:darkGrid, min:-10, max:100,
+        border:{color:'rgba(255,255,255,0.08)'}
       },
-      {
-        type:'bar', label:'상대습도(%)', yAxisID:'yHumid',
-        data: [72,68,75,80,78,82,70,65,60,58],
-        backgroundColor:'rgba(33,150,243,0.25)', borderColor:'rgba(33,150,243,0.6)', borderWidth:1
+      yGrowth:{
+        position:'right',
+        title:{display:true,text:'생육 (cm / mm)',color:'#6a8a6a',font:{size:11}},
+        ticks:{color:'#6a8a6a',font:{size:10}},
+        grid:{display:false}, min:0, max:110,
+        border:{color:'rgba(255,255,255,0.08)'}
       }
-    ]
-  },
-  options: {
-    responsive:true, interaction:{mode:'index'},
-    scales: {
-      yTemp:{ type:'linear', position:'left',  title:{display:true,text:'기온 (°C)'}, grid:{color:'rgba(0,0,0,0.05)'} },
-      yHumid:{type:'linear', position:'right', title:{display:true,text:'습도 (%)'}, max:100, grid:{display:false} }
     },
-    plugins:{ legend:{position:'top'}, tooltip:{} }
-  }
-});
-
-// ── 2. 지온 ──
-new Chart(document.getElementById('chartSoilTemp'), {
-  type:'line', plugins:[stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      { label:'10cm', data:[18,13,7,1,-1,2,6,11,15,19], borderColor:'#e53935', tension:0.4, pointRadius:3 },
-      { label:'20cm', data:[17,12,6,2,0,2,5,10,14,18], borderColor:'#FF9800', tension:0.4, pointRadius:3 },
-      { label:'30cm', data:[16,12,7,3,1,3,5,9,13,17],  borderColor:'#FFC107', tension:0.4, pointRadius:3 },
-    ]
-  },
-  options:{ responsive:true, scales:{ y:{ title:{display:true,text:'지온 (°C)'} } }, plugins:{legend:{position:'top'}} }
-});
-
-// ── 3. 지습 ──
-new Chart(document.getElementById('chartSoilMoist'), {
-  type:'line', plugins:[stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      { label:'10cm', data:[55,60,68,72,70,75,65,58,52,48], borderColor:'#1565c0', tension:0.4, pointRadius:3 },
-      { label:'20cm', data:[58,63,70,74,72,76,67,61,55,50], borderColor:'#42A5F5', tension:0.4, pointRadius:3 },
-      { label:'30cm', data:[60,65,71,75,74,77,69,63,57,52], borderColor:'#90CAF9', tension:0.4, pointRadius:3 },
-    ]
-  },
-  options:{ responsive:true, scales:{ y:{ title:{display:true,text:'지습 (%)'}, max:100 } }, plugins:{legend:{position:'top'}} }
-});
-
-// ── 4. pH ──
-new Chart(document.getElementById('chartPH'), {
-  type:'line', plugins:[stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      {
-        label:'pH', data:[6.2,6.3,6.1,6.0,6.0,6.1,6.3,6.5,6.6,6.4],
-        borderColor:'#9C27B0', backgroundColor:'rgba(156,39,176,0.1)',
-        tension:0.4, pointRadius:4, fill:false
+    plugins:{
+      legend:{
+        display:false  // 상단 커스텀 legend 사용
       },
-      { label:'적정 상한(6.5)', data:Array(10).fill(6.5), borderColor:'rgba(244,67,54,0.5)', borderDash:[6,3], pointRadius:0, borderWidth:1.5 },
-      { label:'적정 하한(6.0)', data:Array(10).fill(6.0), borderColor:'rgba(33,150,243,0.5)', borderDash:[6,3], pointRadius:0, borderWidth:1.5 },
-    ]
-  },
-  options:{
-    responsive:true,
-    scales:{ y:{ title:{display:true,text:'pH'}, min:5.5, max:7.0, grid:{color:'rgba(0,0,0,0.05)'} } },
-    plugins:{legend:{position:'top'}}
+      tooltip:{
+        backgroundColor:'#1a2d1c',
+        borderColor:'#2e5a2e',
+        borderWidth:1,
+        titleColor:'#a5d6a7',
+        bodyColor:'#c8e6c9',
+        padding:10,
+        callbacks:{
+          title: items => `📅 ${items[0].label}`,
+          label: item => ` ${item.dataset.label}: ${item.formattedValue}`
+        }
+      }
+    }
   }
 });
 
-// ── 5. EC ──
-new Chart(document.getElementById('chartEC'), {
-  type:'line', plugins:[stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      {
-        label:'EC (dS/m)', data:[1.0,1.1,1.2,1.0,0.9,1.1,1.4,1.7,1.8,1.6],
-        borderColor:'#FF5722', backgroundColor:'rgba(255,87,34,0.1)',
-        tension:0.4, pointRadius:4, fill:false
-      },
-      { label:'적정 상한(2.0)', data:Array(10).fill(2.0), borderColor:'rgba(244,67,54,0.5)', borderDash:[6,3], pointRadius:0, borderWidth:1.5 },
-      { label:'적정 하한(1.0)', data:Array(10).fill(1.0), borderColor:'rgba(33,150,243,0.5)', borderDash:[6,3], pointRadius:0, borderWidth:1.5 },
-    ]
-  },
-  options:{
-    responsive:true,
-    scales:{ y:{ title:{display:true,text:'EC (dS/m)'}, min:0.5, max:2.5 } },
-    plugins:{legend:{position:'top'}}
-  }
-});
-
-// ── 6. 생육 성장곡선 ──
-new Chart(document.getElementById('chartGrowth'), {
-  type:'line', plugins:[stageBgPlugin],
-  data: {
-    labels: months,
-    datasets: [
-      { label:'초장 실측(cm)', data:[3,8,18,22,24,26,35,48,55,52], borderColor:'#4CAF50', tension:0.4, pointRadius:5 },
-      { label:'초장 표준(cm)', data:[3,7,16,20,22,24,32,44,51,50], borderColor:'#4CAF50', borderDash:[6,3], pointRadius:0, borderWidth:1.5 },
-      { label:'엽수(매)',      data:[2,3,5,6,6,7,8,9,9,8], borderColor:'#2196F3', tension:0.4, pointRadius:4, yAxisID:'yLeaf' },
-      { label:'구경(mm)',      data:[0,0,0,0,5,8,25,55,85,95], borderColor:'#FF9800', tension:0.4, pointRadius:4, yAxisID:'yBulb' },
-    ]
-  },
-  options:{
-    responsive:true, interaction:{mode:'index'},
-    scales:{
-      y:    { title:{display:true,text:'초장 (cm)'},  position:'left' },
-      yLeaf:{ title:{display:true,text:'엽수 (매)'},  position:'right', grid:{display:false}, max:15 },
-      yBulb:{ title:{display:true,text:'구경 (mm)'},  position:'right', grid:{display:false}, offset:true },
-    },
-    plugins:{legend:{position:'top'}}
-  }
-});
-
-// ── 7. 구 발달 ──
-new Chart(document.getElementById('chartBulb'), {
+// ──────────────────────────────────────────
+// 2. 강우/관개 바 차트
+// ──────────────────────────────────────────
+new Chart(document.getElementById('rainChart'),{
   type:'bar',
-  data: {
-    labels:['1월초','1월말','2월초','2월말','3월초','3월말','4월초','4월말','5월초','5월말'],
+  plugins:[stageBgPlugin],
+  data:{
+    labels,
     datasets:[
-      { type:'line', label:'구경(mm)', data:[5,8,10,14,25,40,55,75,85,95], borderColor:'#FF9800', tension:0.4, pointRadius:4, yAxisID:'y' },
-      { type:'bar',  label:'구중(g)',  data:[4,8,12,18,35,65,110,180,240,290], backgroundColor:'rgba(76,175,80,0.35)', yAxisID:'yW' },
+      {label:'강우(mm)', data:[85,60,42,15,8,22,55,90,110,70],
+       backgroundColor:'rgba(100,181,246,0.6)',borderColor:'#64b5f6',borderWidth:1},
+      {label:'관개(mm)', data:[20,15,0,0,0,10,30,40,20,15],
+       backgroundColor:'rgba(255,213,79,0.6)',borderColor:'#ffd54f',borderWidth:1},
     ]
   },
   options:{
-    responsive:true,
+    responsive:true,maintainAspectRatio:false,
     scales:{
-      y:  { title:{display:true,text:'구경 (mm)'}, position:'left' },
-      yW: { title:{display:true,text:'구중 (g)'},  position:'right', grid:{display:false} }
+      x:{ticks:{color:'#5a7a5a',font:{size:10}},grid:darkGrid,border:{color:'rgba(255,255,255,0.06)'}},
+      y:{ticks:{color:'#5a7a5a',font:{size:10}},grid:darkGrid,border:{color:'rgba(255,255,255,0.06)'},
+         title:{display:true,text:'mm',color:'#5a7a5a',font:{size:10}}}
     },
-    plugins:{legend:{position:'top'}}
+    plugins:{
+      legend:{labels:{color:'#8aaa8a',font:{size:10},boxWidth:12}},
+      tooltip:{backgroundColor:'#1a2d1c',borderColor:'#2e5a2e',borderWidth:1,
+               titleColor:'#a5d6a7',bodyColor:'#c8e6c9'}
+    }
   }
 });
 
-// ── 8. 레이더 ──
-new Chart(document.getElementById('chartRadar'), {
-  type:'radar',
+// ──────────────────────────────────────────
+// 3. pH / EC
+// ──────────────────────────────────────────
+new Chart(document.getElementById('phEcChart'),{
+  type:'line',
+  plugins:[stageBgPlugin],
   data:{
-    labels:['초장','엽수','구경','구중','지상부FW','SPAD'],
+    labels,
     datasets:[
-      { label:'현재(3월)',   data:[85,80,75,70,80,72], borderColor:'#4CAF50', backgroundColor:'rgba(76,175,80,0.15)', pointRadius:4 },
-      { label:'1개월 전',   data:[60,65,40,35,55,68], borderColor:'#2196F3', backgroundColor:'rgba(33,150,243,0.10)', borderDash:[5,3], pointRadius:3 },
-      { label:'2개월 전',   data:[45,55,10,5,40,62],  borderColor:'#9E9E9E', backgroundColor:'rgba(158,158,158,0.08)', borderDash:[3,3], pointRadius:3 },
+      {label:'pH',  data:[6.2,6.3,6.1,6.0,6.0,6.1,6.3,6.5,6.6,6.4],
+       borderColor:'#ce93d8',backgroundColor:'rgba(206,147,216,0.08)',
+       yAxisID:'yph',tension:.4,pointRadius:3,borderWidth:2},
+      {label:'pH 상한(6.5)', data:Array(10).fill(6.5),
+       borderColor:'rgba(206,147,216,0.3)',yAxisID:'yph',pointRadius:0,borderWidth:1,borderDash:[5,3]},
+      {label:'pH 하한(6.0)', data:Array(10).fill(6.0),
+       borderColor:'rgba(206,147,216,0.2)',yAxisID:'yph',pointRadius:0,borderWidth:1,borderDash:[5,3]},
+      {label:'EC (dS/m)', data:[1.0,1.1,1.2,1.0,0.9,1.1,1.4,1.7,1.8,1.6],
+       borderColor:'#fff176',backgroundColor:'rgba(255,241,118,0.06)',
+       yAxisID:'yec',tension:.4,pointRadius:3,borderWidth:2},
+      {label:'EC 상한(2.0)', data:Array(10).fill(2.0),
+       borderColor:'rgba(255,241,118,0.3)',yAxisID:'yec',pointRadius:0,borderWidth:1,borderDash:[5,3]},
     ]
   },
   options:{
-    responsive:true,
-    scales:{ r:{ min:0, max:100, ticks:{stepSize:20,font:{size:10}}, pointLabels:{font:{size:12}} } },
-    plugins:{legend:{position:'top'}}
+    responsive:true,maintainAspectRatio:false,
+    scales:{
+      x:{ticks:{color:'#5a7a5a',font:{size:10}},grid:darkGrid,border:{color:'rgba(255,255,255,0.06)'}},
+      yph:{position:'left', min:5.5,max:7.0,
+           ticks:{color:'#ce93d8',font:{size:10}},grid:darkGrid,
+           title:{display:true,text:'pH',color:'#ce93d8',font:{size:10}},
+           border:{color:'rgba(255,255,255,0.06)'}},
+      yec:{position:'right',min:0,max:3,
+           ticks:{color:'#fff176',font:{size:10}},grid:{display:false},
+           title:{display:true,text:'EC',color:'#fff176',font:{size:10}},
+           border:{color:'rgba(255,255,255,0.06)'}}
+    },
+    plugins:{
+      legend:{labels:{color:'#8aaa8a',font:{size:10},boxWidth:12,filter:i=>!i.text.includes('한')}},
+      tooltip:{backgroundColor:'#1a2d1c',borderColor:'#2e5a2e',borderWidth:1,
+               titleColor:'#a5d6a7',bodyColor:'#c8e6c9'}
+    }
   }
 });
 
-// ── 9. 히트맵 ──
-(function() {
-  const envFactors  = ['기온','지온','지습','습도','pH','EC'];
-  const growFactors = ['초장','엽수','구경','구중','지상부FW','지하부FW'];
-  const rValues = [
-    [0.82,0.75,0.88,0.79,0.84,0.71],
-    [0.88,0.80,0.91,0.85,0.89,0.76],
-    [0.60,0.55,0.65,0.62,0.58,0.50],
-    [0.42,0.48,0.35,0.30,0.38,0.28],
-    [0.30,0.28,0.40,0.38,0.25,0.20],
-    [0.55,0.50,0.62,0.60,0.52,0.45],
-  ];
-  function rColor(v) {
-    if (v >= 0.8) return {bg:'#1b5e20',fg:'#fff'};
-    if (v >= 0.6) return {bg:'#4CAF50',fg:'#fff'};
-    if (v >= 0.4) return {bg:'#A5D6A7',fg:'#333'};
-    return {bg:'#E8F5E9',fg:'#555'};
-  }
-  let html = '<table class="heatmap-table"><thead><tr><th></th>';
-  growFactors.forEach(g => html += `<th>${g}</th>`);
-  html += '</tr></thead><tbody>';
-  envFactors.forEach((e,i) => {
-    html += `<tr><td style="font-weight:600;text-align:left;padding:6px 8px;">${e}</td>`;
-    rValues[i].forEach(v => {
-      const c = rColor(v);
-      html += `<td style="background:${c.bg};color:${c.fg};border-radius:4px;">${v.toFixed(2)}</td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  html += '<div style="margin-top:10px;font-size:11px;color:#666;display:flex;gap:12px;">';
-  [{bg:'#1b5e20',fg:'#fff',t:'강한 상관 ≥0.8'},{bg:'#4CAF50',fg:'#fff',t:'보통 ≥0.6'},{bg:'#A5D6A7',fg:'#333',t:'약한 ≥0.4'},{bg:'#E8F5E9',fg:'#555',t:'낮음 <0.4'}].forEach(x=>{
-    html += `<span style="background:${x.bg};color:${x.fg};padding:2px 8px;border-radius:4px;">${x.t}</span>`;
-  });
-  html += '</div>';
-  document.getElementById('heatmapContainer').innerHTML = html;
-})();
+// ──────────────────────────────────────────
+// 4. 영상 타임라인 (우측)
+// ──────────────────────────────────────────
+const tlData = [
+  {date:'2025.09.15', label:'파종 완료', stage:'파종기', sc:'#8d6e1a', dc:'#a08020',
+   icon:'🌾', metrics:['파종심도 1.5cm','구당 1립'], note:'파종 작업 완료'},
+  {date:'2025.10.05', label:'발아 확인', stage:'발아기', sc:'#2e7d32', dc:'#4caf50',
+   icon:'🌿', metrics:['발아율 94%','초장 3cm'], note:'균일 발아'},
+  {date:'2025.11.10', label:'유묘기 진입', stage:'유묘기', sc:'#1b5e20', dc:'#66bb6a',
+   icon:'🌱', metrics:['초장 18cm','엽수 5매'], note:'생육 순조'},
+  {date:'2025.12.20', label:'월동 준비', stage:'월동기', sc:'#0d47a1', dc:'#42a5f5',
+   icon:'❄️', metrics:['초장 22cm','지온 2°C'], note:'보온 멀칭 적용'},
+  {date:'2026.01.15', label:'저온 스트레스', stage:'월동기', sc:'#b71c1c', dc:'#ef5350',
+   icon:'⚠️', metrics:['지온 4°C 이하','성장 정체'], note:'2주간 저온 지속'},
+  {date:'2026.02.20', label:'구비대 시작', stage:'구비대기', sc:'#1b5e20', dc:'#81c784',
+   icon:'🧅', metrics:['초장 26cm','구경 8mm'], note:'구 비대 개시 확인'},
+  {date:'2026.03.20', label:'구비대 급성장', stage:'구비대기', sc:'#33691e', dc:'#aed581',
+   icon:'📈', metrics:['초장 35cm','구경 25mm'], note:'지온 회복 후 급성장'},
+  {date:'2026.04.15', label:'엽 도복 시작', stage:'성숙기', sc:'#f57f17', dc:'#ffd54f',
+   icon:'🌾', metrics:['구경 55mm','구중 110g'], note:'성숙 신호 확인'},
+  {date:'2026.05.14', label:'성숙기 (현재)', stage:'성숙기', sc:'#e65100', dc:'#ff9800',
+   icon:'✅', metrics:['구경 85mm','구중 240g'], note:'수확 준비 중'},
+  {date:'2026.06.10', label:'수확 예정', stage:'수확', sc:'#880e4f', dc:'#f48fb1',
+   icon:'🏆', metrics:['예상 구중 300g+','수확 예정'], note:'예측 기반 수확일'},
+];
 
-// ── 10. 환경 영향도 가로 막대 ──
-new Chart(document.getElementById('chartInfluence'), {
-  type:'bar',
-  data:{
-    labels:['발아기','유묘기','구비대기','성숙기'],
-    datasets:[
-      { label:'지온',  data:[43,30,61,35], backgroundColor:'#e53935' },
-      { label:'기온',  data:[28,55,31,48], backgroundColor:'#FF9800' },
-      { label:'EC',    data:[10,22,5,10],  backgroundColor:'#9C27B0' },
-      { label:'지습',  data:[12,10,8,10],  backgroundColor:'#1565c0' },
-      { label:'pH',    data:[7,8,5,18],   backgroundColor:'#00897B' },
-    ]
-  },
-  options:{
-    indexAxis:'y', responsive:true,
-    scales:{ x:{ stacked:true, max:100, title:{display:true,text:'영향도 (%)'} }, y:{stacked:true} },
-    plugins:{ legend:{position:'top'}, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.raw}%` } } }
-  }
+const tl = document.getElementById('imgTimeline');
+tlData.forEach((d,i)=>{
+  const div = document.createElement('div');
+  div.className = 'tl-item';
+  div.innerHTML = `
+    <div class="tl-dot" style="border-color:${d.dc};"></div>
+    <div class="tl-info">
+      <div class="tl-date">${d.date}</div>
+      <div class="tl-label">${d.label}</div>
+      <span class="tl-stage" style="background:${d.sc}22;color:${d.dc};border:1px solid ${d.dc}44;">${d.stage}</span>
+      <div class="tl-thumb">
+        <span style="font-size:36px;">${d.icon}</span>
+        <div class="play">▶ 0:08</div>
+      </div>
+      <div class="tl-metrics">${d.metrics.map(m=>`<span class="tl-metric">${m}</span>`).join('')}</div>
+      <div style="font-size:10px;color:#5a7a5a;margin-top:3px;">${d.note}</div>
+    </div>`;
+  tl.appendChild(div);
 });
 
-// nav 클릭 active
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-  });
-});
-document.querySelectorAll('.tl-btn').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.tl-btn').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-  });
-});
+// 마지막 아이템은 현재 표시
+tl.children[8].querySelector('.tl-thumb').style.border = '2px solid #4caf50';
 </script>
 </body>
 </html>
